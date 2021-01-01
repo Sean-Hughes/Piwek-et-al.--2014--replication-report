@@ -1,0 +1,3 @@
+The authors kindly shared an example of the Matlab script used to present stimuli, with the caveat that it may not be identical to the final version that was used in the study. 
+
+They also shared the complete set of video and picture stimuli. The name of each clip follows the following key: (1) name of character, (2) level of movement distortion (0,7,14,21,28), (3) variations of the knocking action (1-6).

@@ -1,0 +1,22 @@
+static/Battle0_2 01.png
+static/Klank0_2 01.png
+static/Mannequin0_2 01.png
+static/Skeleton0_2 01.png
+static/Zombie0_2 01.png	
+static/LoMan0_2 01.png
+static/HiMan0_2 01.png
+
+	
+static/Battle0_1.mp4
+static/Klank0_1.mp4
+static/Mannequin0_1.mp4
+static/Skeleton0_1.mp4
+static/Zombie0_1.mp4
+static/LoMan0_1.mp4
+static/HiMan0_1.mp4
+
+
+
+
+
+
