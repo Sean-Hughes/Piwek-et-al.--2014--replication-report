@@ -1,0 +1,2 @@
+subject,experiment,experiment_condition,age,gender,gender_self_describe,condition,acceptability_battle_robot,acceptability_high_man,acceptability_lo_man,acceptability_mannequin,acceptability_skeleton,acceptability_toy_robot,acceptability_zombie,likeness_battle_robot,likeness_high_man,likeness_lo_man,likeness_mannequin,likeness_skeleton,likeness_toy_robot,likeness_zombie,uncanny_valley_check_1,uncanny_valley_check_2
+c7fe61d7-4e9f-4dc2-bc07-d2dca083c23f,1,Human Likeness Condition,33,female,NA,NA,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Yes,Uncanny Valley Question

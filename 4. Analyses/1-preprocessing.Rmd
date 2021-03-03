@@ -1,0 +1,191 @@
+---
+title: "Data preprocessing"
+subtitle: "Convert from SQLite databases to single 'tidy' format dataframe"
+author: "Sean Hughes"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document:
+    code_folding: hide
+    highlight: haddock
+    theme: flatly
+    toc: yes 
+    toc_float: yes
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(message=FALSE,
+                      warning=FALSE)
+```
+
+# Functions and dependencies
+
+```{r}
+
+library(tidyverse)
+library(RSQLite)
+library(jsonlite)
+library(janitor)
+library(furrr)
+
+# set up parallel processing
+future::plan(multiprocess)
+
+# used to extract the JSON data
+parseJSON <- function(input) {
+  input %>%
+    fromJSON(flatten = TRUE) %>% {
+      # Coerce lists
+      if (class(.) == 'list') {
+        discard(., is.null) %>%
+          as_tibble()
+      } else {
+        .
+      } } %>%
+    # Sanitize names
+    janitor::clean_names() %>%
+    # Use only strings for now, and re-encode types later
+    mutate_all(as.character)
+}
+
+```
+
+# Read from SQLite databases
+
+```{r}
+
+# connect to Human Likeness database
+connection_Human_Likeness_Data         <- dbConnect(drv = RSQLite::SQLite(), dbname = "raw/Human_Likeness_Data.sqlite")
+
+# extract main table
+data_database_Human_Likeness_Data         <- dbGetQuery(conn = connection_Human_Likeness_Data,         statement = 'SELECT * FROM labjs')
+
+# close connection
+dbDisconnect(conn = connection_Human_Likeness_Data)
+
+
+
+# connect to Acceptability database
+connection_Acceptability_Data         <- dbConnect(drv = RSQLite::SQLite(), dbname = "raw/Acceptance_Data.sqlite")
+
+# extract main table
+data_database_Acceptability_Data      <- dbGetQuery(conn = connection_Acceptability_Data, statement = 'SELECT * FROM labjs')
+
+# close connection
+dbDisconnect(conn = connection_Acceptability_Data)
+
+
+# discard connection
+rm(connection_Human_Likeness_Data, connection_Acceptability_Data)
+
+```
+
+# Extract Metadata
+
+```{r}
+
+# extract Human Likeness metadata
+data_meta_data_Human_Likeness_Data         <- future_map_dfr(data_database_Human_Likeness_Data$metadata, fromJSON)         %>% dplyr::rename(subject = id)
+
+# remove Human Likeness metadata column
+data_database_Human_Likeness_Data          <- data_database_Human_Likeness_Data %>% bind_cols(data_meta_data_Human_Likeness_Data)         %>% select(-metadata)
+
+# extract Acceptability metadata
+data_meta_data_Acceptability_Data         <- future_map_dfr(data_database_Acceptability_Data$metadata, fromJSON)         %>% dplyr::rename(subject = id)
+
+# remove Acceptability metadata column
+data_database_Acceptability_Data          <- data_database_Acceptability_Data %>% bind_cols(data_meta_data_Acceptability_Data)         %>% select(-metadata)
+
+# remove temporary data frame
+rm(data_meta_data_Human_Likeness_Data, data_meta_data_Acceptability_Data)
+
+```
+
+# Combine across experiments
+
+```{r}
+
+data_database_combined <- 
+  bind_rows(
+    mutate(data_database_Human_Likeness_Data, experiment = 1, experiment_condition = "Human Likeness Condition"),
+    mutate(data_database_Acceptability_Data,  experiment = 1, experiment_condition = "Acceptability Condition"))
+
+rm(data_database_Human_Likeness_Data, data_database_Acceptability_Data)
+
+
+```
+
+
+# Extract full data 
+
+```{r}
+
+data_database_combined_full <- data_database_combined %>%
+  dplyr::filter(payload == 'full') %>%
+  group_by(experiment, experiment_condition, subject, id) %>%
+  do(
+    { future_map_dfr(.$data, parseJSON) } %>%
+      bind_rows()
+  ) %>%
+  ungroup() %>%
+  select(-id)
+
+```
+
+
+# Extract incremental data 
+
+```{r}
+
+data_database_combined_incremental <- data_database_combined %>%
+  dplyr::filter(payload %in% c('incremental', 'latest')) %>%
+  group_by(experiment, experiment_condition, subject, id) %>%
+  do(
+    { future_map_dfr(.$data, parseJSON) } %>%
+      bind_rows()
+  ) %>%
+  ungroup() %>%
+  select(-id)
+
+```
+
+# Merge full and incremental data
+
+For analysis, we'll use the full data sets where available, and incremental data when it is the the only information we have for a user.
+
+```{r}
+
+data_combined <- 
+  bind_rows(data_database_combined_full,
+            filter(data_database_combined_incremental, !(subject %in% data_database_combined_full$subject))) 
+
+```
+
+# Fill empty cells
+
+Fill variables within subject IDs and subset variables i.e., propagate key variable values up and down rows into empty cells for each participant
+
+```{r}
+
+data_preprocessed <- data_combined %>%
+  group_by(subject) %>%
+  fill(matches('condition'), .direction = 'down') %>%
+  fill(matches('condition'), .direction = 'up') %>%
+  
+  fill(matches('code'), .direction = 'down') %>%
+  fill(matches('code'), .direction = 'up') %>%
+  ungroup()
+
+```
+
+# Write to disk
+
+data_preprocessed.rds contains all data from the sqlite databases, simply converted and flattened to an R dataframe. 
+
+```{r}
+
+dir.create("processed")
+write_rds(data_preprocessed, "processed/1_data_preprocessed.rds", compress = "gz")
+
+```
+
+
