@@ -37,6 +37,9 @@ data_preprocessed <- read_rds("processed/1_data_preprocessed.rds")
 
 ```
 
+
+## Study conditions, demographics and method variables
+
 # Trial-level data (Likeness Condition) 
 
 Bring data into 'tidy' format, drop rows and columns that aren't used to score the tasks, etc.
@@ -46,7 +49,15 @@ NB no attempt to remove duplicate participants is made at this stage - that is d
 ```{r}
 
 data_trial_level_likeness_condition <- data_preprocessed %>%
-  filter(experiment_condition == "Human Likeness Condition") %>%
+    filter(experiment_condition == "Human Likeness Condition") %>%
+  
+  mutate(revised_exp_condition = case_when(grepl("1.", condition) ~ "1. Human_Likeness_First_Static", grepl("2.", condition) ~ "2. Acceptability_First_Static")) %>%
+  
+  mutate(condition_number = case_when(grepl("1.", condition) ~ 1, grepl("2.", condition) ~ 2)) %>%
+
+  mutate(ratings_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Acceptability First / Human Likeness Second", grepl("Likeness", revised_exp_condition) ~ "Human Likeness First / Acceptability Second")) %>% 
+
+  mutate(content_type = case_when(grepl("Static", revised_exp_condition) ~ "Static Images")) %>% 
   
   rename(task = sender) %>%
   mutate(task = tolower(task)) %>% 
@@ -81,6 +92,10 @@ data_trial_level_likeness_condition <- data_preprocessed %>%
   select(subject,
          experiment,
          experiment_condition,
+         condition,
+         condition_number,
+         ratings_type,
+         content_type,
          task,
          age,
          gender,
@@ -106,8 +121,16 @@ NB no attempt to remove duplicate participants is made at this stage - that is d
 ```{r}
 
 data_trial_level_acceptability_condition <- data_preprocessed %>%
-  filter(experiment_condition == "Acceptability Condition") %>%
+    filter(experiment_condition == "Acceptability Condition") %>%
   
+   mutate(revised_exp_condition = case_when(grepl("1.", condition) ~ "1. Acceptability_Images_1st_Videos_2nd", grepl("2.", condition) ~ "2. Acceptability_Videos_1st_Images_2nd")) %>%
+  
+  mutate(condition_number = case_when(grepl("1. Acceptability_Images_1st_Videos_2nd", condition) ~ 1, grepl("2. Acceptability_Videos_1st_Images_2nd", condition) ~ 2)) %>%
+
+  mutate(ratings_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Acceptability Only")) %>% 
+
+  mutate(content_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Static Images and Videos")) %>%
+
   rename(task = sender) %>%
   mutate(task = tolower(task)) %>% 
          
@@ -367,6 +390,9 @@ data_trial_level_acceptability_condition <- data_preprocessed %>%
          experiment,
          experiment_condition,
          condition,
+         condition_number,
+         ratings_type,
+         content_type,
          task,
          age,
          gender,
@@ -598,6 +624,8 @@ data_trial_level_acceptability_condition <- data_preprocessed %>%
 ```
 
 
+
+
 ## Write to disk
 
 data_trial_level.csv contains participant level data in tidy format.
@@ -621,6 +649,10 @@ data_conditions_and_demographics_likeness <- data_trial_level_likeness_condition
   select(subject, 
          experiment, 
          experiment_condition,
+         condition,
+         condition_number,
+         ratings_type,
+         content_type,
          age, 
          gender,
          gender_self_describe) %>%
@@ -628,13 +660,16 @@ data_conditions_and_demographics_likeness <- data_trial_level_likeness_condition
   summarise_all(~ first(na.omit(.))) %>%
   ungroup() 
 
-# select out those variables needed for acceptibilty demographics
+# select out those variables needed for acceptability demographics
 
 data_conditions_and_demographics_acceptability <- data_trial_level_acceptability_condition %>% 
   select(subject, 
          experiment, 
          experiment_condition,
          condition,
+         condition_number,
+         ratings_type,
+         content_type,
          age, 
          gender,
          gender_self_describe) %>%
