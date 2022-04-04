@@ -49,15 +49,15 @@ NB no attempt to remove duplicate participants is made at this stage - that is d
 ```{r}
 
 data_trial_level_likeness_condition <- data_preprocessed %>%
-    filter(experiment_condition == "Human Likeness Condition") %>%
+  filter(experiment_condition == "Human Likeness Condition") %>%
   
-  mutate(revised_exp_condition = case_when(grepl("1.", condition) ~ "1. Human_Likeness_First_Static", grepl("2.", condition) ~ "2. Acceptability_First_Static")) %>%
+  mutate(experiment = "Piwek et al. replication") %>% 
   
-  mutate(condition_number = case_when(grepl("1.", condition) ~ 1, grepl("2.", condition) ~ 2)) %>%
-
-  mutate(ratings_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Acceptability First / Human Likeness Second", grepl("Likeness", revised_exp_condition) ~ "Human Likeness First / Acceptability Second")) %>% 
-
-  mutate(content_type = case_when(grepl("Static", revised_exp_condition) ~ "Static Images")) %>% 
+  mutate(ratings_type = "Likeness Ratings") %>% 
+  
+  mutate(content_type = "Static Images") %>% 
+  
+  mutate(condition = "No Manipulation") %>% 
   
   rename(task = sender) %>%
   mutate(task = tolower(task)) %>% 
@@ -67,33 +67,24 @@ data_trial_level_likeness_condition <- data_preprocessed %>%
   fill(matches("condition_alt"), .direction = "down") %>%
   fill(matches("condition_alt"), .direction = "up") %>%
   ungroup() %>%
-
-    mutate(experiment_condition = ifelse(is.na(experiment_condition), experiment_condition_alt, experiment_condition)) %>%
-
-    filter(task %in% c("demographics",
-                       "acceptability_battle_robot",
-                       "acceptability_high_man",
-                       "acceptability_lo_man",
-                       "acceptability_mannequin",
-                       "acceptability_skeleton",
-                       "acceptability_toy_robot",
-                       "acceptability_zombie", 
-                       "likeness_battle_robot",
-                       "likeness_high_man",
-                       "likeness_lo_man",
-                       "likeness_mannequin",
-                       "likeness_skeleton",
-                       "likeness_toy_robot",
-                       "likeness_zombie", 
-                       "exploratory_questions",
-                       "issues")) %>%
+  
+  mutate(experiment_condition = ifelse(is.na(experiment_condition), experiment_condition_alt, experiment_condition)) %>%
+  
+  filter(task %in% c("demographics",
+                     "likeness_battle_robot",
+                     "likeness_high_man",
+                     "likeness_lo_man",
+                     "likeness_mannequin",
+                     "likeness_skeleton",
+                     "likeness_toy_robot",
+                     "likeness_zombie", 
+                     "issues")) %>%
     
   # retain only rows with useful information used to score the tasks
   select(subject,
          experiment,
          experiment_condition,
          condition,
-         condition_number,
          ratings_type,
          content_type,
          task,
@@ -102,8 +93,7 @@ data_trial_level_likeness_condition <- data_preprocessed %>%
          gender_self_describe,
          acceptability_rating,
          likeness_rating,
-         uncanny_valley_check_1,
-         uncanny_valley_check_2) %>%
+         issues_with_study) %>%
   
   # guess appropriate data types
   type_convert()  
@@ -121,16 +111,19 @@ NB no attempt to remove duplicate participants is made at this stage - that is d
 ```{r}
 
 data_trial_level_acceptability_condition <- data_preprocessed %>%
-    filter(experiment_condition == "Acceptability Condition") %>%
+  filter(experiment_condition == "Acceptability Condition") %>%
   
-   mutate(revised_exp_condition = case_when(grepl("1.", condition) ~ "1. Acceptability_Images_1st_Videos_2nd", grepl("2.", condition) ~ "2. Acceptability_Videos_1st_Images_2nd")) %>%
+  mutate(experiment = "Piwek et al. replication") %>% 
+  
+  mutate(ratings_type = "Acceptability Ratings") %>% 
+  
+  mutate(content_type = "Static Images and Videos") %>% 
+  
+  mutate(condition = case_when(grepl("1.", condition) ~ "Static_Images_1st_Videos_2nd", grepl("2.", condition) ~ "Videos_1st_Static_Images_2nd")) %>%
   
   mutate(condition_number = case_when(grepl("1. Acceptability_Images_1st_Videos_2nd", condition) ~ 1, grepl("2. Acceptability_Videos_1st_Images_2nd", condition) ~ 2)) %>%
-
-  mutate(ratings_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Acceptability Only")) %>% 
-
-  mutate(content_type = case_when(grepl("Acceptability", revised_exp_condition) ~ "Static Images and Videos")) %>%
-
+  
+  
   rename(task = sender) %>%
   mutate(task = tolower(task)) %>% 
          
@@ -143,6 +136,7 @@ data_trial_level_acceptability_condition <- data_preprocessed %>%
     mutate(experiment_condition = ifelse(is.na(experiment_condition), experiment_condition_alt, experiment_condition)) %>%
 
     filter(task %in% c("demographics",
+                       "issues",
                        
                        "acceptability_battle_robot_static_b1",
                        "acceptability_high_man_static_b1",
@@ -398,9 +392,8 @@ data_trial_level_acceptability_condition <- data_preprocessed %>%
          gender,
          gender_self_describe,
          acceptability_rating,
-         uncanny_valley_check_1,
-         uncanny_valley_check_2,
-         
+         issues_with_study,
+
          acceptability_battle_robot_m1_v1,
          acceptability_battle_robot_m1_v2,
          acceptability_battle_robot_m1_v3,
@@ -623,9 +616,6 @@ data_trial_level_acceptability_condition <- data_preprocessed %>%
 
 ```
 
-
-
-
 ## Write to disk
 
 data_trial_level.csv contains participant level data in tidy format.
@@ -633,6 +623,7 @@ data_trial_level.csv contains participant level data in tidy format.
 ```{r}
 
 write_rds(data_trial_level_acceptability_condition, "processed/2.1_data_trial_level_acceptability_condition.rds", compress = "gz")
+
 write_rds(data_trial_level_likeness_condition, "processed/2.1_data_trial_level_likeness_condition.rds", compress = "gz")
 
 ```
@@ -647,10 +638,9 @@ write_rds(data_trial_level_likeness_condition, "processed/2.1_data_trial_level_l
 
 data_conditions_and_demographics_likeness <- data_trial_level_likeness_condition %>% 
   select(subject, 
-         experiment, 
-         experiment_condition,
+         experiment,
          condition,
-         condition_number,
+         experiment_condition,
          ratings_type,
          content_type,
          age, 
@@ -690,14 +680,7 @@ rm(data_conditions_and_demographics_likeness, data_conditions_and_demographics_a
 # Subset the data for the likeness condition ratings
 
 data_trial_level_likeness_condition_ratings <- data_trial_level_likeness_condition %>%
-      filter(task %in% c("acceptability_battle_robot",
-                       "acceptability_high_man",
-                       "acceptability_lo_man",
-                       "acceptability_mannequin",
-                       "acceptability_skeleton",
-                       "acceptability_toy_robot",
-                       "acceptability_zombie", 
-                       "likeness_battle_robot",
+      filter(task %in% c("likeness_battle_robot",
                        "likeness_high_man",
                        "likeness_lo_man",
                        "likeness_mannequin",
@@ -705,42 +688,20 @@ data_trial_level_likeness_condition_ratings <- data_trial_level_likeness_conditi
                        "likeness_toy_robot",
                        "likeness_zombie")) %>%
   
-    select(subject, 
+  select(subject, 
          task,
-        acceptability_rating,
-        likeness_rating) %>%
+         likeness_rating) %>%
   arrange(subject, task) 
   
 # Spread data so that there is only one row per participant
 
 data_trial_level_likeness_condition_long <- data_trial_level_likeness_condition_ratings %>%
-  pivot_wider(names_from = task, values_from = c(acceptability_rating, likeness_rating)) %>% 
+  pivot_wider(names_from = task, values_from = c(likeness_rating)) %>% 
   group_by(subject) %>%
   summarise_all(~ first(na.omit(.))) %>%
   ungroup() %>%
-  mutate(acceptability_battle_robot = acceptability_rating_acceptability_battle_robot,
-         acceptability_high_man = acceptability_rating_acceptability_high_man,
-         acceptability_lo_man = acceptability_rating_acceptability_lo_man,
-         acceptability_mannequin = acceptability_rating_acceptability_mannequin,
-         acceptability_skeleton = acceptability_rating_acceptability_skeleton, 
-         acceptability_toy_robot = acceptability_rating_acceptability_toy_robot,
-         acceptability_zombie = acceptability_rating_acceptability_zombie, 
-         likeness_battle_robot = likeness_rating_likeness_battle_robot, 
-         likeness_high_man = likeness_rating_likeness_high_man,
-         likeness_lo_man = likeness_rating_likeness_lo_man, 
-         likeness_mannequin = likeness_rating_likeness_mannequin,
-         likeness_skeleton = likeness_rating_likeness_skeleton, 
-         likeness_toy_robot = likeness_rating_likeness_toy_robot,
-         likeness_zombie = likeness_rating_likeness_zombie) %>%
-  
+
   select(subject,
-         acceptability_battle_robot,
-         acceptability_high_man,
-         acceptability_lo_man,
-         acceptability_mannequin,
-         acceptability_skeleton,
-         acceptability_toy_robot,
-         acceptability_zombie,
          likeness_battle_robot,
          likeness_high_man,
          likeness_lo_man,
@@ -1221,8 +1182,259 @@ data_trial_level_acceptability_condition_ratings <- data_trial_level_acceptabili
          acceptability_zombie_m5_v5,
          acceptability_zombie_m5_v6) %>%
   arrange(subject, task) 
-  
-data_trial_level_acceptability_moving_ratings_long <- data_trial_level_acceptability_condition_ratings %>% 
+
+
+data_trial_level_acceptability_condition_ratings_mean <- data_trial_level_acceptability_condition_ratings %>%
+  group_by(subject) %>%
+  mutate(acceptability_battle_robot_m1_v1 = mean(acceptability_battle_robot_m1_v1, na.rm = TRUE),
+         acceptability_battle_robot_m1_v2 = mean(acceptability_battle_robot_m1_v2, na.rm = TRUE),
+         acceptability_battle_robot_m1_v3 = mean(acceptability_battle_robot_m1_v3, na.rm = TRUE),
+         acceptability_battle_robot_m1_v4 = mean(acceptability_battle_robot_m1_v4, na.rm = TRUE),         
+         acceptability_battle_robot_m1_v5 = mean(acceptability_battle_robot_m1_v5, na.rm = TRUE),         
+         acceptability_battle_robot_m1_v6 = mean(acceptability_battle_robot_m1_v6, na.rm = TRUE),         
+         
+         
+         acceptability_battle_robot_m2_v1 = mean(acceptability_battle_robot_m2_v1, na.rm = TRUE),
+         acceptability_battle_robot_m2_v2 = mean(acceptability_battle_robot_m2_v2, na.rm = TRUE),
+         acceptability_battle_robot_m2_v3 = mean(acceptability_battle_robot_m2_v3, na.rm = TRUE),
+         acceptability_battle_robot_m2_v4 = mean(acceptability_battle_robot_m2_v4, na.rm = TRUE),
+         acceptability_battle_robot_m2_v5 = mean(acceptability_battle_robot_m2_v5, na.rm = TRUE),
+         acceptability_battle_robot_m2_v6 = mean(acceptability_battle_robot_m2_v6, na.rm = TRUE),
+         
+         acceptability_battle_robot_m3_v1 = mean(acceptability_battle_robot_m3_v1, na.rm = TRUE),
+         acceptability_battle_robot_m3_v2 = mean(acceptability_battle_robot_m3_v2, na.rm = TRUE),
+         acceptability_battle_robot_m3_v3 = mean(acceptability_battle_robot_m3_v3, na.rm = TRUE),
+         acceptability_battle_robot_m3_v4 = mean(acceptability_battle_robot_m3_v4, na.rm = TRUE),
+         acceptability_battle_robot_m3_v5 = mean(acceptability_battle_robot_m3_v5, na.rm = TRUE),
+         acceptability_battle_robot_m3_v6 = mean(acceptability_battle_robot_m3_v6, na.rm = TRUE),
+         
+         acceptability_battle_robot_m4_v1 = mean(acceptability_battle_robot_m4_v1, na.rm = TRUE),
+         acceptability_battle_robot_m4_v2 = mean(acceptability_battle_robot_m4_v2, na.rm = TRUE),
+         acceptability_battle_robot_m4_v3 = mean(acceptability_battle_robot_m4_v3, na.rm = TRUE),
+         acceptability_battle_robot_m4_v4 = mean(acceptability_battle_robot_m4_v4, na.rm = TRUE),
+         acceptability_battle_robot_m4_v5 = mean(acceptability_battle_robot_m4_v5, na.rm = TRUE),
+         acceptability_battle_robot_m4_v6 = mean(acceptability_battle_robot_m4_v6, na.rm = TRUE),
+         
+         acceptability_battle_robot_m5_v1 = mean(acceptability_battle_robot_m5_v1, na.rm = TRUE),
+         acceptability_battle_robot_m5_v2 = mean(acceptability_battle_robot_m5_v2, na.rm = TRUE),
+         acceptability_battle_robot_m5_v3 = mean(acceptability_battle_robot_m5_v3, na.rm = TRUE),
+         acceptability_battle_robot_m5_v4 = mean(acceptability_battle_robot_m5_v4, na.rm = TRUE),
+         acceptability_battle_robot_m5_v5 = mean(acceptability_battle_robot_m5_v5, na.rm = TRUE),
+         acceptability_battle_robot_m5_v6 = mean(acceptability_battle_robot_m5_v6, na.rm = TRUE),
+         
+         acceptability_high_man_m1_v1 = mean(acceptability_high_man_m1_v1, na.rm = TRUE),
+         acceptability_high_man_m1_v2 = mean(acceptability_high_man_m1_v2, na.rm = TRUE),
+         acceptability_high_man_m1_v3 = mean(acceptability_high_man_m1_v3, na.rm = TRUE),
+         acceptability_high_man_m1_v4 = mean(acceptability_high_man_m1_v4, na.rm = TRUE),
+         acceptability_high_man_m1_v5 = mean(acceptability_high_man_m1_v5, na.rm = TRUE),
+         acceptability_high_man_m1_v6 = mean(acceptability_high_man_m1_v6, na.rm = TRUE),
+         
+         acceptability_high_man_m2_v1 = mean(acceptability_high_man_m2_v1, na.rm = TRUE),
+         acceptability_high_man_m2_v2 = mean(acceptability_high_man_m2_v2, na.rm = TRUE),
+         acceptability_high_man_m2_v3 = mean(acceptability_high_man_m2_v3, na.rm = TRUE),
+         acceptability_high_man_m2_v4 = mean(acceptability_high_man_m2_v4, na.rm = TRUE),
+         acceptability_high_man_m2_v5 = mean(acceptability_high_man_m2_v5, na.rm = TRUE),
+         acceptability_high_man_m2_v6 = mean(acceptability_high_man_m2_v6, na.rm = TRUE),
+         
+         acceptability_high_man_m3_v1 = mean(acceptability_high_man_m3_v1, na.rm = TRUE),
+         acceptability_high_man_m3_v2 = mean(acceptability_high_man_m3_v2, na.rm = TRUE),
+         acceptability_high_man_m3_v3 = mean(acceptability_high_man_m3_v3, na.rm = TRUE),
+         acceptability_high_man_m3_v4 = mean(acceptability_high_man_m3_v4, na.rm = TRUE),
+         acceptability_high_man_m3_v5 = mean(acceptability_high_man_m3_v5, na.rm = TRUE),
+         acceptability_high_man_m3_v6 = mean(acceptability_high_man_m3_v6, na.rm = TRUE),
+         
+         acceptability_high_man_m4_v1 = mean(acceptability_high_man_m4_v1, na.rm = TRUE),
+         acceptability_high_man_m4_v2 = mean(acceptability_high_man_m4_v2, na.rm = TRUE),
+         acceptability_high_man_m4_v3 = mean(acceptability_high_man_m4_v3, na.rm = TRUE),
+         acceptability_high_man_m4_v4 = mean(acceptability_high_man_m4_v4, na.rm = TRUE),
+         acceptability_high_man_m4_v5 = mean(acceptability_high_man_m4_v5, na.rm = TRUE),
+         acceptability_high_man_m4_v6 = mean(acceptability_high_man_m4_v6, na.rm = TRUE),
+
+         acceptability_high_man_m5_v1 = mean(acceptability_high_man_m5_v1, na.rm = TRUE),
+         acceptability_high_man_m5_v2 = mean(acceptability_high_man_m5_v2, na.rm = TRUE),
+         acceptability_high_man_m5_v3 = mean(acceptability_high_man_m5_v3, na.rm = TRUE),
+         acceptability_high_man_m5_v4 = mean(acceptability_high_man_m5_v4, na.rm = TRUE),
+         acceptability_high_man_m5_v5 = mean(acceptability_high_man_m5_v5, na.rm = TRUE),
+         acceptability_high_man_m5_v6 = mean(acceptability_high_man_m5_v6, na.rm = TRUE),
+         
+         acceptability_lo_man_m1_v1 = mean(acceptability_lo_man_m1_v1, na.rm = TRUE),
+         acceptability_lo_man_m1_v2 = mean(acceptability_lo_man_m1_v2, na.rm = TRUE),
+         acceptability_lo_man_m1_v3 = mean(acceptability_lo_man_m1_v3, na.rm = TRUE),
+         acceptability_lo_man_m1_v4 = mean(acceptability_lo_man_m1_v4, na.rm = TRUE),
+         acceptability_lo_man_m1_v5 = mean(acceptability_lo_man_m1_v5, na.rm = TRUE),
+         acceptability_lo_man_m1_v6 = mean(acceptability_lo_man_m1_v6, na.rm = TRUE),
+         
+         acceptability_lo_man_m2_v1 = mean(acceptability_lo_man_m2_v1, na.rm = TRUE),
+         acceptability_lo_man_m2_v2 = mean(acceptability_lo_man_m2_v2, na.rm = TRUE),
+         acceptability_lo_man_m2_v3 = mean(acceptability_lo_man_m2_v3, na.rm = TRUE),
+         acceptability_lo_man_m2_v4 = mean(acceptability_lo_man_m2_v4, na.rm = TRUE),
+         acceptability_lo_man_m2_v5 = mean(acceptability_lo_man_m2_v5, na.rm = TRUE),
+         acceptability_lo_man_m2_v6 = mean(acceptability_lo_man_m2_v6, na.rm = TRUE),
+         
+         acceptability_lo_man_m3_v1 = mean(acceptability_lo_man_m3_v1, na.rm = TRUE),
+         acceptability_lo_man_m3_v2 = mean(acceptability_lo_man_m3_v2, na.rm = TRUE),
+         acceptability_lo_man_m3_v3 = mean(acceptability_lo_man_m3_v3, na.rm = TRUE),
+         acceptability_lo_man_m3_v4 = mean(acceptability_lo_man_m3_v4, na.rm = TRUE),
+         acceptability_lo_man_m3_v5 = mean(acceptability_lo_man_m3_v5, na.rm = TRUE),
+         acceptability_lo_man_m3_v6 = mean(acceptability_lo_man_m3_v6, na.rm = TRUE),
+         
+         acceptability_lo_man_m4_v1 = mean(acceptability_lo_man_m4_v1, na.rm = TRUE),
+         acceptability_lo_man_m4_v2 = mean(acceptability_lo_man_m4_v2, na.rm = TRUE),
+         acceptability_lo_man_m4_v3 = mean(acceptability_lo_man_m4_v3, na.rm = TRUE),
+         acceptability_lo_man_m4_v4 = mean(acceptability_lo_man_m4_v4, na.rm = TRUE),
+         acceptability_lo_man_m4_v5 = mean(acceptability_lo_man_m4_v5, na.rm = TRUE),
+         acceptability_lo_man_m4_v6 = mean(acceptability_lo_man_m4_v6, na.rm = TRUE),
+         
+         acceptability_lo_man_m5_v1 = mean(acceptability_lo_man_m5_v1, na.rm = TRUE),
+         acceptability_lo_man_m5_v2 = mean(acceptability_lo_man_m5_v2, na.rm = TRUE),
+         acceptability_lo_man_m5_v3 = mean(acceptability_lo_man_m5_v3, na.rm = TRUE),
+         acceptability_lo_man_m5_v4 = mean(acceptability_lo_man_m5_v4, na.rm = TRUE),
+         acceptability_lo_man_m5_v5 = mean(acceptability_lo_man_m5_v5, na.rm = TRUE),
+         acceptability_lo_man_m5_v6 = mean(acceptability_lo_man_m5_v6, na.rm = TRUE),
+         
+         acceptability_mannequin_m1_v1 = mean(acceptability_mannequin_m1_v1, na.rm = TRUE),
+         acceptability_mannequin_m1_v2 = mean(acceptability_mannequin_m1_v2, na.rm = TRUE),
+         acceptability_mannequin_m1_v3 = mean(acceptability_mannequin_m1_v3, na.rm = TRUE),
+         acceptability_mannequin_m1_v4 = mean(acceptability_mannequin_m1_v4, na.rm = TRUE),
+         acceptability_mannequin_m1_v5 = mean(acceptability_mannequin_m1_v5, na.rm = TRUE),
+         acceptability_mannequin_m1_v6 = mean(acceptability_mannequin_m1_v6, na.rm = TRUE),
+         
+         acceptability_mannequin_m2_v1 = mean(acceptability_mannequin_m2_v1, na.rm = TRUE),
+         acceptability_mannequin_m2_v2 = mean(acceptability_mannequin_m2_v2, na.rm = TRUE),
+         acceptability_mannequin_m2_v3 = mean(acceptability_mannequin_m2_v3, na.rm = TRUE),
+         acceptability_mannequin_m2_v4 = mean(acceptability_mannequin_m2_v4, na.rm = TRUE),
+         acceptability_mannequin_m2_v5 = mean(acceptability_mannequin_m2_v5, na.rm = TRUE),
+         acceptability_mannequin_m2_v6 = mean(acceptability_mannequin_m2_v6, na.rm = TRUE),
+         
+         acceptability_mannequin_m3_v1 = mean(acceptability_mannequin_m3_v1, na.rm = TRUE),
+         acceptability_mannequin_m3_v2 = mean(acceptability_mannequin_m3_v2, na.rm = TRUE),
+         acceptability_mannequin_m3_v3 = mean(acceptability_mannequin_m3_v3, na.rm = TRUE),
+         acceptability_mannequin_m3_v4 = mean(acceptability_mannequin_m3_v4, na.rm = TRUE),
+         acceptability_mannequin_m3_v5 = mean(acceptability_mannequin_m3_v5, na.rm = TRUE),
+         acceptability_mannequin_m3_v6 = mean(acceptability_mannequin_m3_v6, na.rm = TRUE),
+         
+         acceptability_mannequin_m4_v1 = mean(acceptability_mannequin_m4_v1, na.rm = TRUE),
+         acceptability_mannequin_m4_v2 = mean(acceptability_mannequin_m4_v2, na.rm = TRUE),
+         acceptability_mannequin_m4_v3 = mean(acceptability_mannequin_m4_v3, na.rm = TRUE),
+         acceptability_mannequin_m4_v4 = mean(acceptability_mannequin_m4_v4, na.rm = TRUE),
+         acceptability_mannequin_m4_v5 = mean(acceptability_mannequin_m4_v5, na.rm = TRUE),
+         acceptability_mannequin_m4_v6 = mean(acceptability_mannequin_m4_v6, na.rm = TRUE),
+         
+         acceptability_mannequin_m5_v1 = mean(acceptability_mannequin_m5_v1, na.rm = TRUE),
+         acceptability_mannequin_m5_v2 = mean(acceptability_mannequin_m5_v2, na.rm = TRUE),
+         acceptability_mannequin_m5_v3 = mean(acceptability_mannequin_m5_v3, na.rm = TRUE),
+         acceptability_mannequin_m5_v4 = mean(acceptability_mannequin_m5_v4, na.rm = TRUE),
+         acceptability_mannequin_m5_v5 = mean(acceptability_mannequin_m5_v5, na.rm = TRUE),
+         acceptability_mannequin_m5_v6 = mean(acceptability_mannequin_m5_v6, na.rm = TRUE),
+         
+         acceptability_skeleton_m1_v1 = mean(acceptability_skeleton_m1_v1, na.rm = TRUE),
+         acceptability_skeleton_m1_v2 = mean(acceptability_skeleton_m1_v2, na.rm = TRUE),
+         acceptability_skeleton_m1_v3 = mean(acceptability_skeleton_m1_v3, na.rm = TRUE),
+         acceptability_skeleton_m1_v4 = mean(acceptability_skeleton_m1_v4, na.rm = TRUE),
+         acceptability_skeleton_m1_v5 = mean(acceptability_skeleton_m1_v5, na.rm = TRUE),
+         acceptability_skeleton_m1_v6 = mean(acceptability_skeleton_m1_v6, na.rm = TRUE),
+         
+         acceptability_skeleton_m2_v1 = mean(acceptability_skeleton_m2_v1, na.rm = TRUE),
+         acceptability_skeleton_m2_v2 = mean(acceptability_skeleton_m2_v2, na.rm = TRUE),
+         acceptability_skeleton_m2_v3 = mean(acceptability_skeleton_m2_v3, na.rm = TRUE),
+         acceptability_skeleton_m2_v4 = mean(acceptability_skeleton_m2_v4, na.rm = TRUE),
+         acceptability_skeleton_m2_v5 = mean(acceptability_skeleton_m2_v5, na.rm = TRUE),
+         acceptability_skeleton_m2_v6 = mean(acceptability_skeleton_m2_v6, na.rm = TRUE),
+         
+         acceptability_skeleton_m3_v1 = mean(acceptability_skeleton_m3_v1, na.rm = TRUE),
+         acceptability_skeleton_m3_v2 = mean(acceptability_skeleton_m3_v2, na.rm = TRUE),
+         acceptability_skeleton_m3_v3 = mean(acceptability_skeleton_m3_v3, na.rm = TRUE),
+         acceptability_skeleton_m3_v4 = mean(acceptability_skeleton_m3_v4, na.rm = TRUE),
+         acceptability_skeleton_m3_v5 = mean(acceptability_skeleton_m3_v5, na.rm = TRUE),
+         acceptability_skeleton_m3_v6 = mean(acceptability_skeleton_m3_v6, na.rm = TRUE),
+         
+         acceptability_skeleton_m4_v1 = mean(acceptability_skeleton_m4_v1, na.rm = TRUE),
+         acceptability_skeleton_m4_v2 = mean(acceptability_skeleton_m4_v2, na.rm = TRUE),
+         acceptability_skeleton_m4_v3 = mean(acceptability_skeleton_m4_v3, na.rm = TRUE),
+         acceptability_skeleton_m4_v4 = mean(acceptability_skeleton_m4_v4, na.rm = TRUE),
+         acceptability_skeleton_m4_v5 = mean(acceptability_skeleton_m4_v5, na.rm = TRUE),
+         acceptability_skeleton_m4_v6 = mean(acceptability_skeleton_m4_v6, na.rm = TRUE),
+         
+         acceptability_skeleton_m5_v1 = mean(acceptability_skeleton_m5_v1, na.rm = TRUE),
+         acceptability_skeleton_m5_v2 = mean(acceptability_skeleton_m5_v2, na.rm = TRUE),
+         acceptability_skeleton_m5_v3 = mean(acceptability_skeleton_m5_v3, na.rm = TRUE),
+         acceptability_skeleton_m5_v4 = mean(acceptability_skeleton_m5_v4, na.rm = TRUE),
+         acceptability_skeleton_m5_v5 = mean(acceptability_skeleton_m5_v5, na.rm = TRUE),
+         acceptability_skeleton_m5_v6 = mean(acceptability_skeleton_m5_v6, na.rm = TRUE),
+         
+         acceptability_toy_robot_m1_v1 = mean(acceptability_toy_robot_m1_v1, na.rm = TRUE),
+         acceptability_toy_robot_m1_v2 = mean(acceptability_toy_robot_m1_v2, na.rm = TRUE),
+         acceptability_toy_robot_m1_v3 = mean(acceptability_toy_robot_m1_v3, na.rm = TRUE),
+         acceptability_toy_robot_m1_v4 = mean(acceptability_toy_robot_m1_v4, na.rm = TRUE),
+         acceptability_toy_robot_m1_v5 = mean(acceptability_toy_robot_m1_v5, na.rm = TRUE),
+         acceptability_toy_robot_m1_v6 = mean(acceptability_toy_robot_m1_v6, na.rm = TRUE),
+ 
+         acceptability_toy_robot_m2_v1 = mean(acceptability_toy_robot_m2_v1, na.rm = TRUE),
+         acceptability_toy_robot_m2_v2 = mean(acceptability_toy_robot_m2_v2, na.rm = TRUE),
+         acceptability_toy_robot_m2_v3 = mean(acceptability_toy_robot_m2_v3, na.rm = TRUE),
+         acceptability_toy_robot_m2_v4 = mean(acceptability_toy_robot_m2_v4, na.rm = TRUE),
+         acceptability_toy_robot_m2_v5 = mean(acceptability_toy_robot_m2_v5, na.rm = TRUE),
+         acceptability_toy_robot_m2_v6 = mean(acceptability_toy_robot_m2_v6, na.rm = TRUE),
+         
+         acceptability_toy_robot_m3_v1 = mean(acceptability_toy_robot_m3_v1, na.rm = TRUE),
+         acceptability_toy_robot_m3_v2 = mean(acceptability_toy_robot_m3_v2, na.rm = TRUE),
+         acceptability_toy_robot_m3_v3 = mean(acceptability_toy_robot_m3_v3, na.rm = TRUE),
+         acceptability_toy_robot_m3_v4 = mean(acceptability_toy_robot_m3_v4, na.rm = TRUE),
+         acceptability_toy_robot_m3_v5 = mean(acceptability_toy_robot_m3_v5, na.rm = TRUE),
+         acceptability_toy_robot_m3_v6 = mean(acceptability_toy_robot_m3_v6, na.rm = TRUE),
+         
+         acceptability_toy_robot_m4_v1 = mean(acceptability_toy_robot_m4_v1, na.rm = TRUE),
+         acceptability_toy_robot_m4_v2 = mean(acceptability_toy_robot_m4_v2, na.rm = TRUE),
+         acceptability_toy_robot_m4_v3 = mean(acceptability_toy_robot_m4_v3, na.rm = TRUE),
+         acceptability_toy_robot_m4_v4 = mean(acceptability_toy_robot_m4_v4, na.rm = TRUE),
+         acceptability_toy_robot_m4_v5 = mean(acceptability_toy_robot_m4_v5, na.rm = TRUE),
+         acceptability_toy_robot_m4_v6 = mean(acceptability_toy_robot_m4_v6, na.rm = TRUE),
+         
+         acceptability_toy_robot_m5_v1 = mean(acceptability_toy_robot_m5_v1, na.rm = TRUE),
+         acceptability_toy_robot_m5_v2 = mean(acceptability_toy_robot_m5_v2, na.rm = TRUE),
+         acceptability_toy_robot_m5_v3 = mean(acceptability_toy_robot_m5_v3, na.rm = TRUE),
+         acceptability_toy_robot_m5_v4 = mean(acceptability_toy_robot_m5_v4, na.rm = TRUE),
+         acceptability_toy_robot_m5_v5 = mean(acceptability_toy_robot_m5_v5, na.rm = TRUE),
+         acceptability_toy_robot_m5_v6 = mean(acceptability_toy_robot_m5_v6, na.rm = TRUE),
+         
+         acceptability_zombie_m1_v1 = mean(acceptability_zombie_m1_v1, na.rm = TRUE),
+         acceptability_zombie_m1_v2 = mean(acceptability_zombie_m1_v2, na.rm = TRUE),
+         acceptability_zombie_m1_v3 = mean(acceptability_zombie_m1_v3, na.rm = TRUE),
+         acceptability_zombie_m1_v4 = mean(acceptability_zombie_m1_v4, na.rm = TRUE),
+         acceptability_zombie_m1_v5 = mean(acceptability_zombie_m1_v5, na.rm = TRUE),
+         acceptability_zombie_m1_v6 = mean(acceptability_zombie_m1_v6, na.rm = TRUE),
+         
+         acceptability_zombie_m2_v1 = mean(acceptability_zombie_m2_v1, na.rm = TRUE),
+         acceptability_zombie_m2_v2 = mean(acceptability_zombie_m2_v2, na.rm = TRUE),
+         acceptability_zombie_m2_v3 = mean(acceptability_zombie_m2_v3, na.rm = TRUE),
+         acceptability_zombie_m2_v4 = mean(acceptability_zombie_m2_v4, na.rm = TRUE),
+         acceptability_zombie_m2_v5 = mean(acceptability_zombie_m2_v5, na.rm = TRUE),
+         acceptability_zombie_m2_v6 = mean(acceptability_zombie_m2_v6, na.rm = TRUE),
+         
+         acceptability_zombie_m3_v1 = mean(acceptability_zombie_m3_v1, na.rm = TRUE),
+         acceptability_zombie_m3_v2 = mean(acceptability_zombie_m3_v2, na.rm = TRUE),
+         acceptability_zombie_m3_v3 = mean(acceptability_zombie_m3_v3, na.rm = TRUE),
+         acceptability_zombie_m3_v4 = mean(acceptability_zombie_m3_v4, na.rm = TRUE),
+         acceptability_zombie_m3_v5 = mean(acceptability_zombie_m3_v5, na.rm = TRUE),
+         acceptability_zombie_m3_v6 = mean(acceptability_zombie_m3_v6, na.rm = TRUE),
+         
+         acceptability_zombie_m4_v1 = mean(acceptability_zombie_m4_v1, na.rm = TRUE),
+         acceptability_zombie_m4_v2 = mean(acceptability_zombie_m4_v2, na.rm = TRUE),
+         acceptability_zombie_m4_v3 = mean(acceptability_zombie_m4_v3, na.rm = TRUE),
+         acceptability_zombie_m4_v4 = mean(acceptability_zombie_m4_v4, na.rm = TRUE),
+         acceptability_zombie_m4_v5 = mean(acceptability_zombie_m4_v5, na.rm = TRUE),
+         acceptability_zombie_m4_v6 = mean(acceptability_zombie_m4_v6, na.rm = TRUE),
+
+         acceptability_zombie_m5_v1 = mean(acceptability_zombie_m5_v1, na.rm = TRUE),
+         acceptability_zombie_m5_v2 = mean(acceptability_zombie_m5_v2, na.rm = TRUE),
+         acceptability_zombie_m5_v3 = mean(acceptability_zombie_m5_v3, na.rm = TRUE),
+         acceptability_zombie_m5_v4 = mean(acceptability_zombie_m5_v4, na.rm = TRUE),
+         acceptability_zombie_m5_v5 = mean(acceptability_zombie_m5_v5, na.rm = TRUE),
+         acceptability_zombie_m5_v6 = mean(acceptability_zombie_m5_v6, na.rm = TRUE),) %>%
+  ungroup() 
+
+
+data_trial_level_acceptability_moving_ratings_long <- data_trial_level_acceptability_condition_ratings_mean %>% 
   group_by(subject) %>%
   summarise_all(~ first(na.omit(.))) %>%
   ungroup() %>%
@@ -1269,39 +1481,6 @@ data_trial_level_acceptability_condition_long <- data_trial_level_acceptability_
 rm(data_trial_level_acceptability_condition_ratings, data_trial_level_acceptability_static_ratings_long, data_trial_level_acceptability_moving_ratings_long)
 ```
 
-
-# Exploratory Questions
-
-```{r}
-
-# Select and retain only the exploratory questions and participant id from the likeness condition
-
-data_exploratory_questions_likeness_condition <- data_trial_level_likeness_condition %>%
-  select(subject, 
-         uncanny_valley_check_1, 
-         uncanny_valley_check_2) %>% 
-  group_by(subject) %>%
-  summarise_all(~ first(na.omit(.))) %>%
-  ungroup() 
-  
-# Select and retain only the exploratory questions and participant id from the acceptability condition
-data_exploratory_questions_acceptability_condition <- data_trial_level_acceptability_condition %>%
-  select(subject, 
-         uncanny_valley_check_1, 
-         uncanny_valley_check_2) %>% 
-  group_by(subject) %>%
-  summarise_all(~ first(na.omit(.))) %>%
-  ungroup()
-
-# Combine the two
-data_exploratory_questions <- data_exploratory_questions_likeness_condition %>%
-  bind_rows(data_exploratory_questions_acceptability_condition)
-
-rm(data_exploratory_questions_likeness_condition, data_exploratory_questions_acceptability_condition)
-
-```
-
-
 # Join Files Together
 
 ```{r}
@@ -1309,13 +1488,14 @@ rm(data_exploratory_questions_likeness_condition, data_exploratory_questions_acc
 # Join all the files together for analyses
 
 data_post_processing_acceptability_condition <- data_conditions_and_demographics %>% 
-  inner_join(data_trial_level_acceptability_condition_long, by='subject') %>%
-  inner_join(data_exploratory_questions, by='subject')
+  inner_join(data_trial_level_acceptability_condition_long, by='subject') 
 
 data_post_processing_likeness_condition <- data_conditions_and_demographics %>% 
-  inner_join(data_trial_level_likeness_condition_long, by='subject')  %>%
-  inner_join(data_exploratory_questions, by='subject')
-
+  inner_join(data_trial_level_likeness_condition_long, by='subject') %>%
+  select(- condition, 
+         - condition_number, 
+         - ratings_type, 
+         - content_type)
 
 ```
 

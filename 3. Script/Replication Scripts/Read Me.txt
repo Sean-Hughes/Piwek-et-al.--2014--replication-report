@@ -1,0 +1,6 @@
+The experimental scripts for this replication can be opened by:
+
+1. Downloading the scripts from OSF
+2. Navigating to https://labjs.felixhenninger.com/ 
+3. Clicking on the drop down arrow on the upper left side of the screen and selecting the "Open" option
+4. Clicking the "play" button will run the script
